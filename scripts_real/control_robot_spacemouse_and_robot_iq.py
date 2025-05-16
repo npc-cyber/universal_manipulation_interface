@@ -20,15 +20,14 @@ from umi.common.precise_sleep import precise_wait
 
 # %%
 @click.command()
-@click.option('-rh', '--robot_hostname', default='172.24.95.9')
-@click.option('-gh', '--gripper_hostname', default='172.24.95.27')
+@click.option('-rh', '--robot_hostname', default='192.168.0.8')
+@click.option('-gh', '--gripper_hostname', default='192.168.0.18')
 @click.option('-gp', '--gripper_port', type=int, default=1000)
 @click.option('-f', '--frequency', type=float, default=30)
 @click.option('-gs', '--gripper_speed', type=float, default=200.0)
 def main(robot_hostname, gripper_hostname, gripper_port, frequency, gripper_speed):
     max_pos_speed = 0.25
     max_rot_speed = 0.6
-    max_gripper_width = 90.
     cube_diag = np.linalg.norm([1,1,1])
     tcp_offset = 0.13
     # tcp_offset = 0
@@ -47,7 +46,7 @@ def main(robot_hostname, gripper_hostname, gripper_port, frequency, gripper_spee
         RTDEInterpolationController(
             shm_manager=shm_manager,
             robot_ip=robot_hostname,
-            frequency=125,
+            frequency=500,
             lookahead_time=0.05,
             gain=1000,
             max_pos_speed=max_pos_speed*cube_diag,
@@ -62,7 +61,6 @@ def main(robot_hostname, gripper_hostname, gripper_port, frequency, gripper_spee
             # to account for recever interfance latency, use target pose
             # to init buffer.
             state = controller.get_state()
-            # 这边是读取目标位姿 然后不断增量
             target_pose = state['TargetTCPPose']
             gripper_target_pos = gripper.get_state()['gripper_position']
             t_start = time.monotonic()
@@ -76,7 +74,6 @@ def main(robot_hostname, gripper_hostname, gripper_port, frequency, gripper_spee
                 t_command_target = t_cycle_end + dt
 
                 precise_wait(t_sample)
-                # 这个地方读取了空间鼠标的状态
                 sm_state = sm.get_motion_state_transformed()
                 # print(sm_state)
                 dpos = sm_state[:3] * (max_pos_speed / frequency)
@@ -93,9 +90,8 @@ def main(robot_hostname, gripper_hostname, gripper_port, frequency, gripper_spee
                     dpos = -gripper_speed / frequency
                 if sm.is_button_pressed(1):
                     dpos = gripper_speed / frequency
-                gripper_target_pos = np.clip(gripper_target_pos + dpos, 0, max_gripper_width)
-                
-                # 应该是此处更新了target pose
+                gripper_target_pos = np.clip(gripper_target_pos + dpos, 0, 90.)
+ 
                 controller.schedule_waypoint(target_pose, 
                     t_command_target-time.monotonic()+time.time())
                 gripper.schedule_waypoint(gripper_target_pos, 
@@ -103,6 +99,8 @@ def main(robot_hostname, gripper_hostname, gripper_port, frequency, gripper_spee
 
                 precise_wait(t_cycle_end)
                 iter_idx += 1
+                print(1/(time.time() -s))
+
 
 # %%
 if __name__ == '__main__':

@@ -252,6 +252,7 @@ class RTDEInterpolationController(mp.Process):
             # use monotonic time to make sure the control loop never go backward
             curr_t = time.monotonic()
             last_waypoint_time = curr_t
+            # 先读取当前的作为初始状态
             pose_interp = PoseTrajectoryInterpolator(
                 times=[curr_t],
                 poses=[curr_pose]
@@ -269,6 +270,7 @@ class RTDEInterpolationController(mp.Process):
                 # diff = t_now - pose_interp.times[-1]
                 # if diff > 0:
                 #     print('extrapolate', diff)
+                # 这个地方应该是时间插值
                 pose_command = pose_interp(t_now)
                 vel = 0.5
                 acc = 0.5
@@ -292,6 +294,7 @@ class RTDEInterpolationController(mp.Process):
                     # commands = self.input_queue.get_all()
                     # n_cmd = len(commands['cmd'])
                     # process at most 1 command per cycle to maintain frequency
+                    # 一直读取
                     commands = self.input_queue.get_k(1)
                     n_cmd = len(commands['cmd'])
                 except Empty:
