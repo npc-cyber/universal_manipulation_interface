@@ -432,6 +432,7 @@ def main(input, output, robot_config,
                     iter_idx += 1
                 
                 # ========== policy control loop ==============
+                # 模型推理控制
                 try:
                     # start episode
                     policy.reset()
@@ -476,6 +477,7 @@ def main(input, output, robot_config,
                                 episode_start_pose=episode_start_pose)
                             obs_dict = dict_apply(obs_dict_np, 
                                 lambda x: torch.from_numpy(x).unsqueeze(0).to(device))
+                            # 从这个地方开始推理
                             result = policy.predict_action(obs_dict)
                             raw_action = result['action_pred'][0].detach().to('cpu').numpy()
                             action = get_real_umi_action(raw_action, obs, action_pose_repr)

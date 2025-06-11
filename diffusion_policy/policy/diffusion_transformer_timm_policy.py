@@ -12,7 +12,7 @@ from diffusion_policy.model.diffusion.transformer_for_action_diffusion import Tr
 from diffusion_policy.common.pytorch_util import dict_apply
 from diffusion_policy.model.vision.transformer_obs_encoder import TransformerObsEncoder
 
-
+# 推理模型是这个
 class DiffusionTransformerTimmPolicy(BaseImagePolicy):
     def __init__(self, 
             shape_meta: dict,

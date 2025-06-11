@@ -17,12 +17,12 @@ from umi.real_world.spacemouse_shared_memory import Spacemouse
 from umi.real_world.rtde_interpolation_controller import RTDEInterpolationController
 from umi.real_world.wsg_controller import WSGController
 from umi.common.precise_sleep import precise_wait
-
+from .robotiq_gripper import RobotiqGripper
 # %%
 @click.command()
 @click.option('-rh', '--robot_hostname', default='192.168.0.8')
 @click.option('-gh', '--gripper_hostname', default='192.168.0.18')
-@click.option('-gp', '--gripper_port', type=int, default=1000)
+@click.option('-gp', '--gripper_port', type=int, default=63352)
 @click.option('-f', '--frequency', type=float, default=30)
 @click.option('-gs', '--gripper_speed', type=float, default=200.0)
 def main(robot_hostname, gripper_hostname, gripper_port, frequency, gripper_speed):
@@ -35,15 +35,7 @@ def main(robot_hostname, gripper_hostname, gripper_port, frequency, gripper_spee
     command_latency = dt / 2
 
     with SharedMemoryManager() as shm_manager:
-        with WSGController(
-            shm_manager=shm_manager,
-            hostname=gripper_hostname,
-            port=gripper_port,
-            frequency=frequency,
-            move_max_speed=400.0,
-            verbose=False
-        ) as gripper,\
-        RTDEInterpolationController(
+        with RTDEInterpolationController(
             shm_manager=shm_manager,
             robot_ip=robot_hostname,
             frequency=500,
@@ -62,9 +54,16 @@ def main(robot_hostname, gripper_hostname, gripper_port, frequency, gripper_spee
             # to init buffer.
             state = controller.get_state()
             target_pose = state['TargetTCPPose']
-            gripper_target_pos = gripper.get_state()['gripper_position']
+
+            gripper = RobotiqGripper()
+            print("Connecting to gripper...")
+            gripper.connect(gripper_hostname, gripper_port)
+            print("Activating gripper...")
+            gripper.activate()
+            gripper_position = gripper.get_current_position()
+            print(gripper_position)
+
             t_start = time.monotonic()
-            gripper.restart_put(t_start-time.monotonic() + time.time())
             
             iter_idx = 0
             while True:
@@ -86,16 +85,18 @@ def main(robot_hostname, gripper_hostname, gripper_port, frequency, gripper_spee
                 
                 dpos = 0
                 if sm.is_button_pressed(0):
-                    # close gripper
-                    dpos = -gripper_speed / frequency
+                    gripper_position += 3
+                    gripper_position = np.clip(gripper_position,0,255)
+                    gripper.move(gripper_position, 155, 255)
+
                 if sm.is_button_pressed(1):
-                    dpos = gripper_speed / frequency
-                gripper_target_pos = np.clip(gripper_target_pos + dpos, 0, 90.)
- 
+                    gripper_position -= 3
+                    gripper_position = np.clip(gripper_position,0,255)
+                    gripper.move(gripper_position, 155, 255)
+
                 controller.schedule_waypoint(target_pose, 
                     t_command_target-time.monotonic()+time.time())
-                gripper.schedule_waypoint(gripper_target_pos, 
-                    t_command_target-time.monotonic()+time.time())
+                
 
                 precise_wait(t_cycle_end)
                 iter_idx += 1

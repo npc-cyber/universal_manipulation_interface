@@ -7,6 +7,7 @@ from diffusion_policy.model.common.module_attr_mixin import ModuleAttrMixin
 
 logger = logging.getLogger(__name__)
 
+# 是这个
 class TransformerForActionDiffusion(ModuleAttrMixin):
     def __init__(self,
         input_dim: int,

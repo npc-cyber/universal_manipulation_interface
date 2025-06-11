@@ -46,6 +46,7 @@ class TrainDiffusionTransformerTimmWorkspace(BaseWorkspace):
         random.seed(seed)
 
         # configure model
+        # 模型是这个模型
         self.model: DiffusionTransformerTimmPolicy
         self.model = hydra.utils.instantiate(cfg.policy)
 
